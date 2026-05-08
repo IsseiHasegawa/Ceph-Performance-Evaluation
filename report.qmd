@@ -1,0 +1,165 @@
+---
+title: "Ceph Performance Evaluation Report"
+author: "Issei Hasegawa"
+date: "May 7, 2026"
+format:
+  pdf:
+    toc: true
+    number-sections: true
+    code-line-numbers: true
+bibliography: references.bib
+---
+
+# Overview
+
+This report describes the setup and evaluation of a Ceph storage cluster on CloudLab. The goal of this experiment is to deploy Ceph on multiple nodes, replay a vscsi block trace workload, measure system performance, and analyze whether the results are reasonable.
+
+# Experimental Environment
+
+This experiment was conducted on CloudLab using multiple nodes.
+
+## Hardware Environment
+
+- Platform: CloudLab
+- Number of nodes: TODO
+- CPU: TODO
+- Memory: TODO
+- Storage device: TODO
+- Network: TODO
+
+## Software Environment
+
+- Operating system: TODO
+- Ceph version: TODO
+- Benchmark/replay tool: TODO
+- Trace file: `cloudPhysicsIO.vscsi`
+
+# Ceph Configuration
+
+In this experiment, a Ceph cluster was configured using several nodes.
+
+## Cluster Configuration
+
+- MON node(s): TODO
+- MGR node(s): TODO
+- OSD node(s): TODO
+- Client node: TODO
+- Pool configuration: TODO
+- Replication factor: TODO
+
+## Storage Configuration
+
+Ceph stores data across Object Storage Daemons (OSDs). In this experiment, the available disks on the nodes were used as OSDs, and the workload was replayed from a client node against the Ceph storage system.
+
+# Workload
+
+This experiment uses a vscsi block I/O trace as the workload.
+
+## Trace
+
+The trace used in this experiment is:
+
+```text
+cloudPhysicsIO.vscsi
+```
+
+This trace represents block-level I/O requests. By replaying this trace against the Ceph cluster, the experiment applies a workload that is closer to a realistic storage access pattern than a purely synthetic benchmark.
+
+## Workload Characteristics
+
+The workload can be analyzed using the following characteristics:
+
+- Read/write ratio: TODO
+- Request size distribution: TODO
+- Sequential or random access pattern: TODO
+- Total number of requests: TODO
+- Replay duration: TODO
+
+# Measurement Method
+
+The performance of the Ceph cluster was measured while replaying the workload.
+
+## Metrics
+
+The main metrics collected in this experiment are:
+
+- Throughput
+- IOPS
+- Average latency
+- Tail latency
+- CPU usage
+- Memory usage
+- Network usage
+- Disk utilization
+
+## Procedure
+
+The experimental procedure is as follows:
+
+1. Allocate multiple nodes on CloudLab.
+2. Install and configure Ceph on the nodes.
+3. Set up the Ceph cluster.
+4. Prepare a storage interface such as RBD or CephFS.
+5. Replay the vscsi trace workload.
+6. Record performance metrics during the experiment.
+7. Organize the results into tables and figures.
+8. Analyze whether the observed results make sense.
+
+# Results
+
+This section presents the results collected during the experiment.
+
+## Throughput
+
+TODO: Present the throughput results using a table or figure.
+
+## IOPS
+
+TODO: Present the IOPS results using a table or figure.
+
+## Latency
+
+TODO: Present the average latency and tail latency results.
+
+## Resource Usage
+
+TODO: Present CPU, memory, network, and disk utilization results.
+
+# Discussion
+
+This section discusses the meaning of the experimental results.
+
+The discussion should address questions such as:
+
+- Was the observed throughput reasonable?
+- Did the system reach any bottlenecks?
+- Was latency affected by the workload characteristics?
+- Did the bottleneck appear to be CPU, network, disk, or Ceph configuration?
+- Did the results match the expected behavior of the vscsi trace?
+- How did the Ceph configuration affect performance?
+
+# Limitations and Future Improvements
+
+This experiment has several limitations.
+
+## Limitations
+
+- The number of nodes was limited.
+- The experiment may have been run only a small number of times.
+- CloudLab hardware and network conditions may affect the results.
+- Only one workload trace was used.
+- The Ceph configuration may not have been fully optimized.
+- The results may depend on the selected storage interface, such as RBD or CephFS.
+
+## Future Improvements
+
+Future work could improve the experiment in the following ways:
+
+- Increase the number of nodes to evaluate scalability.
+- Compare different replication factors.
+- Test multiple workloads, such as read-heavy and write-heavy workloads.
+- Run each experiment multiple times and report averages and variation.
+- Analyze latency distribution and tail latency in more detail.
+- Compare different Ceph pool, OSD, and cache configurations.
+
+# References

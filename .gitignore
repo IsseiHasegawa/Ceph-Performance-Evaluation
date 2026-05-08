@@ -1,0 +1,6 @@
+report_files/
+*.log
+*.aux
+*.out
+*.toc
+*.tex
