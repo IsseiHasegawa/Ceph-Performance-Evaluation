@@ -11,8 +11,13 @@ bibliography: references.bib
 ---
 
 # Overview
+This study evaluates the performance of Ceph, a distributed storage system, by utilizing a block I/O trace. Ceph is designed to unify storage devices across various nodes, providing both durability and scalability. In particular, the RADOS Block Device (RBD) enables the creation of virtual block devices on top of Ceph, which can be accessed for reading and writing just like standard disks.
 
-This report describes the setup and evaluation of a Ceph storage cluster on CloudLab. The goal of this experiment is to deploy Ceph on multiple nodes, replay a vscsi block trace workload, measure system performance, and analyze whether the results are reasonable.
+The purpose of this study is to replay a vSCSI block I/O trace named cloudPhysicsIO.vscsi on a Ceph cluster set up on CloudLab, while measuring and analyzing its performance throughout the replay process. Rather than relying on artificial benchmarks such as basic random reads or writes, this study employs a trace that more accurately reflects real-world storage access patterns. This approach allows for the observation of Ceph's behavior under a more authentic workload.
+
+Regarding the performance evaluation, it primarily collects metrics such as throughput, IOPS, latency, CPU usage, memory usage, network usage, and disk usage.Using these metrics, we assess the performance of the Ceph cluster, identify any bottlenecks, and determine whether the observed results are reasonable given the workload and Ceph configuration.
+
+This paper first describes the experimental environment and the configuration of the Ceph cluster, followed by an explanation of the characteristics of the vSCSI traces used and the measurement methods employed. Finally, based on the results obtained, we analyze the performance characteristics of Ceph and discuss the limitations of this experiment and areas for future improvement.
 
 # Experimental Environment
 
