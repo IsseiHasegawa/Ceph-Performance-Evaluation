@@ -38,6 +38,17 @@ This study used three nodes on CloudLab's FASTA25-AE project. Used nodes, 'node0
 With this configuration, Ceph stores data using HDDs distributed across multiple nodes. Consequently, the performance results of this experiment are influenced not only by the performance of individual disks but also by HDD access speeds, the inter-node network, and Ceph’s replication processes.
 
 ## Software Environment
+This study used Ubuntu 22.04.2 LTS on each node, and installed Ceph 17.2.9 Quincy to set up the cluster. For Ceph storage, RBD was used and vSCSI was replayed for created RBD. Regarding the trace replay, an originally created Python script was used, which reads block I/O called 'cloudPhysicsIO.vscsi' and issues actual read/write requests to '/dev/rbd0'. In addition, in order to analyze the cash performance, 'cachesim' from libCacheSim was utilized. The software environment is summarized in the following table:
+
+| Component | Version / Detail |
+|---|---|
+| Operating System | Ubuntu 22.04.2 LTS, Linux 5.15.0-168-generic |
+| Ceph | 17.2.9 Quincy |
+| Trace replay tool | Custom Python script using `O_SYNC` direct I/O to `/dev/rbd0` |
+| Cache simulation tool | libCacheSim `cachesim` |
+| Trace file | `cloudPhysicsIO.vscsi` |
+
+This software environment enables a comparison between the I/O performance on an actual Ceph cluster and the behavior predicted by cache simulations.
 
 # Ceph Configuration
 

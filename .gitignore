@@ -4,3 +4,5 @@ report_files/
 *.out
 *.toc
 *.tex
+/.quarto/
+**/*.quarto_ipynb
