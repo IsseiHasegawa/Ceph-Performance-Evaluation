@@ -173,10 +173,65 @@ This approach allowed us to compare the cache miss rate predicted by libCacheSim
 This chapter presents the results of cache simulations using libCacheSim, the results of real I/O replay on Ceph RBDs, and the cache performance of BlueStore. These results are used to compare the cache behavior predicted by the simulations with the performance observed on an actual Ceph cluster.
 
 ## Cache Simulation Results
+First, we used libCacheSim to perform cache simulations on the `cloudPhysicsIO.vscsi` trace. In the simulations, we used four different cache replacement algorithms—LRU, LFU, FIFO, and ARC—and measured the miss ratio for multiple cache sizes ranging from 10 MB to 2 GB.
+
+| Cache Size | LRU | LFU | FIFO | ARC |
+|---:|---:|---:|---:|---:|
+| 10 MB | 0.8366 | 0.8245 | 0.8413 | 0.8248 |
+| 50 MB | 0.8277 | 0.8174 | 0.8290 | 0.8130 |
+| 100 MB | 0.8210 | 0.8081 | 0.8214 | 0.7967 |
+| 500 MB | 0.7174 | 0.6737 | 0.7380 | 0.6525 |
+| 1 GB | 0.6297 | 0.5653 | 0.6335 | 0.5687 |
+| 2 GB | 0.4301 | 0.4301 | 0.4301 | 0.4301 |
+
+As a result, the miss ratio decreased for all algorithms as the cache size increased. In particular, with a cache size of 2 GB, all algorithms converged to the same miss ratio of 0.4301. This suggests that the primary working set size for this trace is approximately 2 GB.
+
+Furthermore, with a 1 GB cache size, the LRU miss ratio was 0.6297, while the ARC miss ratio was 0.5687. This indicates that ARC performed relatively well for this workload because it takes both recency and frequency into account.
 
 ## Real I/O Replay Results
+Next, the same `cloudPhysicsIO.vscsi` trace was replayed as real block I/O against the Ceph RBD device `/dev/rbd0`. A total of 113,872 requests were replayed, and the experiment measured replay time, IOPS, throughput, and errors.
+
+| Metric | Value |
+|---|---:|
+| Total requests | 113,872 |
+| Total replay time | 1,645 seconds |
+| Overall IOPS | 69.22 |
+| Read throughput | 1.04 MB/s |
+| Write throughput | 1.40 MB/s |
+| Total throughput | 2.44 MB/s |
+| Errors | 0 |
+
+The full replay took 1,645 seconds, or approximately 27 minutes. The overall IOPS was 69.22. The read throughput was 1.04 MB/s, the write throughput was 1.40 MB/s, and the total throughput was 2.44 MB/s. No errors occurred during the replay.
+
+The latency results are shown below.
+
+| Latency Metric | All I/O | Read only | Write only |
+|---|---:|---:|---:|
+| Average | 14.442 ms | 0.056 ms | 24.543 ms |
+| Median | 16.687 ms | 0.024 ms | 22.342 ms |
+| p95 | 33.256 ms | — | — |
+| p99 | 78.505 ms | 0.708 ms | 95.260 ms |
+| Max | 227.357 ms | 18.811 ms | 227.357 ms |
+
+The latency results show that write operations had much higher latency than read operations. The average write latency was 24.543 ms, while the average read latency was only 0.056 ms. The p99 write latency was 95.260 ms, and the maximum write latency was 227.357 ms. These results indicate that write operations were more expensive than read operations in this experiment.
+
 
 ## BlueStore Cache Performance
+Finally, BlueStore performance counters were used to measure the cache behavior actually observed inside the Ceph backend. The counters were collected from all six OSDs before and after the replay, and the differences were used to estimate the cache activity caused by the workload.
+
+| BlueStore Metric | Value |
+|---|---:|
+| Total random reads | 1,902 |
+| Cache hits (`read_random_buffer_count`) | 436 |
+| Cache misses (`read_random_disk_count`) | 1,520 |
+| BlueStore cache hit rate | 22.9% |
+| BlueStore cache miss rate | 79.9% |
+
+According to the BlueStore performance counters, 1,902 random reads reached BlueStore during the replay. Among them, 436 reads were served from the BlueStore memory cache, while 1,520 reads required disk access.
+
+The observed BlueStore cache hit rate was 22.9%, and the cache miss rate was 79.9%. These values serve as the real-system measurements that can be compared with the idealized cache simulation results from libCacheSim.
+
+This section reports the results only. The reasons for the difference between the simulated cache behavior and the observed BlueStore cache behavior are discussed in the next section.
 
 # Discussion
 
