@@ -1,13 +1,16 @@
 ---
 title: "Ceph Performance Evaluation Report"
 author: "Issei Hasegawa"
-date: "May 7, 2026"
+date: "May 20, 2026"
 format:
   pdf:
     toc: true
     number-sections: true
     code-line-numbers: true
+    fig-pos: 'H'
 bibliography: references.bib
+execute:
+  echo: false
 ---
 
 # Overview
@@ -53,9 +56,9 @@ This software environment enables a comparison between the I/O performance on an
 In this experiment, a Ceph cluster was set up using three nodes. This section describes the configuration of the Ceph cluster and the setting of storage used in this experiment.
 
 ## Cluster Topology
-The Ceph cluster in this experiment consists of three nodes, which are 'node0', 'node1', and 'node2'. Each node hosted a MON daemon, forming a quorum of three monitors. Additionally, MGR daemon was configured with 'node0' as the active manager and 'node1' as the standby manager. 
+The Ceph cluster in this experiment consists of three nodes, which are 'node0', 'node1', and 'node2'. Each node hosted a MON daemon, forming a quorum of three monitors. Additionally, an MGR daemon was configured with 'node0' as the active manager and 'node1' as the standby manager. 
 
-Six OSDs were set up in total. Each node had two HDD and each HDD was used as a Ceph OSD. Specifically, 'osd.0' and 'osd.2' were placed on 'node0', 'osd.1' and 'osd.3' were placed on 'node1', and 'osd.4' and 'osd.5' were placed on 'node2'. BlueStore was used as the OSD backend.
+Six OSDs were set up in total. Each node had two HDDs and each HDD was used as a Ceph OSD. Specifically, 'osd.0' and 'osd.2' were placed on 'node0', 'osd.1' and 'osd.3' were placed on 'node1', and 'osd.4' and 'osd.5' were placed on 'node2'. BlueStore was used as the OSD backend.
 The Ceph cluster configuration is summarized below.
 
 | Component | Configuration |
@@ -73,7 +76,7 @@ The Ceph cluster configuration is summarized below.
 | Total raw capacity | 5.5 TiB |
 | Cluster health | `HEALTH_OK` |
 
-In this configuration, all of three nodes are related to both the cluster management and data storage. 
+In this configuration, all three nodes participate in both cluster management and data storage.
 
 ## Storage Configuration
 This experiment utilized Ceph RBD to establish a block device. A 35 GB RBD image, designated as `trace-disk`, was created and mapped on `node0` as `/dev/rbd0`. The trace replay workload was performed on this mapped RBD device.
@@ -177,6 +180,59 @@ This approach allowed us to compare the cache miss rate predicted by libCacheSim
 This chapter presents the results of cache simulations using libCacheSim, the results of real I/O replay on Ceph RBDs, and the cache performance of BlueStore. These results are used to compare the cache behavior predicted by the simulations with the performance observed on an actual Ceph cluster.
 
 ## Cache Simulation Results
+```{python}
+#| label: fig-miss-rate
+#| fig-cap: "Cache miss rate vs. cache size for four eviction algorithms. The red point shows the BlueStore actual miss rate at 1 GB."
+#| fig-width: 8
+#| fig-height: 4.5
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+cache_sizes = ['10 MB', '50 MB', '100 MB', '500 MB', '1 GB', '2 GB']
+x = np.arange(len(cache_sizes))
+
+lru  = [0.8366, 0.8277, 0.8210, 0.7174, 0.6297, 0.4301]
+lfu  = [0.8245, 0.8174, 0.8081, 0.6737, 0.5653, 0.4301]
+fifo = [0.8413, 0.8290, 0.8214, 0.7380, 0.6335, 0.4301]
+arc  = [0.8248, 0.8130, 0.7967, 0.6525, 0.5687, 0.4301]
+
+fig, ax = plt.subplots(figsize=(8, 4.5))
+
+ax.plot(x, lru,  color='#378ADD', linewidth=2, marker='o',
+        markersize=5, label='LRU')
+ax.plot(x, lfu,  color='#1D9E75', linewidth=2, marker='^',
+        markersize=5, linestyle='--', label='LFU')
+ax.plot(x, fifo, color='#D85A30', linewidth=2, marker='s',
+        markersize=5, linestyle=':', label='FIFO')
+ax.plot(x, arc,  color='#7F77DD', linewidth=2, marker='D',
+        markersize=5, label='ARC')
+
+ax.scatter([4], [0.799], color='#E24B4A', s=120, zorder=5,
+           label='BlueStore actual (1 GB)')
+
+ax.set_xticks(x)
+ax.set_xticklabels(cache_sizes, fontsize=11)
+ax.set_xlabel('Cache size', fontsize=12)
+ax.set_ylabel('Miss rate', fontsize=12)
+ax.set_ylim(0.3, 0.95)
+ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f'{v:.2f}'))
+ax.grid(axis='y', color='gray', alpha=0.2, linewidth=0.8)
+ax.grid(axis='x', color='gray', alpha=0.1, linewidth=0.5)
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
+ax.legend(
+    fontsize=9,
+    framealpha=0.9,
+    loc='upper center',
+    bbox_to_anchor=(0.5, -0.18),
+    ncol=3,
+    columnspacing=1.0,
+)
+
+plt.tight_layout(rect=(0, 0.14, 1, 1))
+```
+
 First, we used libCacheSim to perform cache simulations on the `cloudPhysicsIO.vscsi` trace. In the simulations, we used four different cache replacement algorithms—LRU, LFU, FIFO, and ARC—and measured the miss ratio for multiple cache sizes ranging from 10 MB to 2 GB.
 
 | Cache Size | LRU | LFU | FIFO | ARC |
