@@ -235,11 +235,51 @@ This section reports the results only. The reasons for the difference between th
 
 # Discussion
 
+This section discusses the meaning of the experimental results. In particular, it focuses on whether the observed write latency is reasonable for the Ceph configuration, why there is a gap between the cache simulation results and the actual BlueStore cache performance, and why the measured read latency should be interpreted carefully.
+
 ## Write Latency
+
+In this experiment, the average write latency was 24.543 ms, and the p99 write latency was 95.260 ms. These results are reasonable given the experimental environment.
+
+The main reason is that a Ceph write operation is not a simple write to a single disk. In this experiment, the replication factor was set to 3. Therefore, each write request had to be replicated to three OSDs. From the client’s perspective, a write can only complete after the required OSDs process the write and return acknowledgements.
+
+In addition, this experiment used HDDs as OSD disks. HDDs are affected by seek time and rotational latency during random writes, so write latency is generally higher than it would be with SSDs. Ceph’s BlueStore commit process and network communication between nodes can also contribute to the final write latency.
+
+Therefore, an average write latency of about 24 ms and a p99 write latency of about 95 ms are not surprising for a Ceph cluster using HDDs with 3-way replication. These results indicate that the Ceph write path is affected by disk performance, replication, and internal BlueStore processing.
 
 ## Simulation vs. Real-World Gap
 
+One of the central findings of this experiment is the gap between the cache miss ratio predicted by libCacheSim and the cache miss rate actually observed in BlueStore.
+
+For a 1 GB cache size, the libCacheSim LRU simulation predicted a miss ratio of 62.97%. In contrast, the actual BlueStore performance counters showed a cache miss rate of 79.9%. This means that the observed BlueStore miss rate was about 16.9 percentage points higher than the simulated result.
+
+| Measurement | Miss Rate | Hit Rate |
+|---|---:|---:|
+| libCacheSim, LRU, 1 GB | 62.97% | 37.03% |
+| BlueStore actual | 79.9% | 22.9% |
+| Gap | +16.9 percentage points | -14.1 percentage points |
+
+There are three main reasons for this gap.
+
+First, the BlueStore cache is not dedicated only to user data. The libCacheSim simulation assumes an ideal cache where the full 1 GB cache is available for data blocks. However, in the real Ceph system, the BlueStore cache is shared among data blocks, onode metadata, RocksDB key-value entries, allocation metadata, and other internal structures. Therefore, the effective cache capacity available for user data is smaller than 1 GB.
+
+Second, replication increases cache pressure. Since the replication factor was 3, each logical write was stored on three different OSDs. Each OSD has its own independent BlueStore cache. As a result, the workload is distributed across multiple independent caches rather than managed by a single unified cache, as assumed in the simulation. This cache fragmentation can reduce caching efficiency.
+
+Third, libCacheSim uses an idealized cache replacement model. BlueStore’s actual cache eviction behavior is more complex than a simple LRU policy. It must manage multiple types of cached data, including user data, metadata, onodes, and RocksDB-related entries. Therefore, data that would remain cached in an ideal simulation may be evicted in the real system to make room for metadata or other internal structures.
+
+For these reasons, the libCacheSim results are useful as a theoretical baseline, but they do not fully reproduce the cache behavior of a real Ceph BlueStore deployment.
+
 ## Read Latency Caveat
+
+In this experiment, the average read latency was only 0.056 ms. However, this value should not be interpreted as the true disk-level read performance of Ceph.
+
+The main reason is the effect of the Linux page cache. Although the page cache was dropped before the replay started, write operations during the replay could repopulate the client-side page cache. If later read operations accessed the same or nearby addresses, those reads could be served from the Linux page cache instead of reaching the Ceph OSDs.
+
+This interpretation is supported by the BlueStore performance counters. Although the trace contained 46,974 read requests, only 1,902 random reads reached BlueStore. This suggests that many read requests were likely served by the client-side page cache rather than the Ceph backend.
+
+Therefore, the measured read latency in this experiment is strongly influenced by the Linux page cache and should not be treated as pure Ceph OSD or HDD read latency. To measure Ceph read performance more accurately, a separate read-only workload should be issued against pre-written data after carefully controlling both the Linux page cache and the BlueStore cache.
+
+This is an important limitation of the current experiment, and future experiments should include a more controlled read performance measurement.
 
 # Limitations and Future Work
 
