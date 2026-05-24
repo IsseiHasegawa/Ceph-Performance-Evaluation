@@ -15,15 +15,14 @@ This study evaluates the performance of Ceph, a distributed storage system, by u
 
 The purpose of this study is to replay a vSCSI block I/O trace named cloudPhysicsIO.vscsi on a Ceph cluster set up on CloudLab, while measuring and analyzing its performance throughout the replay process. Rather than relying on artificial benchmarks such as basic random reads or writes, this study employs a trace that more accurately reflects real-world storage access patterns. This approach allows for the observation of Ceph's behavior under a more authentic workload.
 
-Regarding the performance evaluation, it primarily collects metrics such as throughput, IOPS, latency, CPU usage, memory usage, network usage, and disk usage.Using these metrics, we assess the performance of the Ceph cluster, identify any bottlenecks, and determine whether the observed results are reasonable given the workload and Ceph configuration.
+Regarding the performance evaluation, it primarily collects metrics such as throughput, IOPS, and latency. Using these metrics, we assess the performance of the Ceph cluster, identify any bottlenecks, and determine whether the observed results are reasonable given the workload and Ceph configuration.
 
 This paper first describes the experimental environment and the configuration of the Ceph cluster, followed by an explanation of the characteristics of the vSCSI traces used and the measurement methods employed. Finally, based on the results obtained, we analyze the performance characteristics of Ceph and discuss the limitations of this experiment and areas for future improvement.
 
 # Experimental Environment
-In this study, three nodes were used on CloudLab and a Ceph cluster was set up with them. Each node has same hardware specifications, which are used to evaluate the perfomance of Ceph as distributed storage system. In this study, the storage were set up across multiple nodes, and an actual block I/O trace was replayed on the Ceph RBD. Because of this, the porpose of this expeirment is not to observe the simple simulation, but to evaluate the I/O performance of Ceph under a real-world distributed storage environment. 
 
 ## Hardware Environment
-This study used three nodes on CloudLab's FASTA25-AE project. Used nodes, 'node0', 'node1', and 'node2', have the same hardware specifications. Each node is equipped with an Intel Xeon E5-2630 v3 CPU, 64 GB of DDR4 memory, an SSD for the operating system, and HDDs used as Ceph OSDs. Specifically, each node has two HDDs, for a total of six HDDs used as Ceph OSDs. Additionally, a 10 GbE network was used for communication between nodes.
+This study used three nodes on CloudLab's FAST25-AE project. Used nodes, 'node0', 'node1', and 'node2', have the same hardware specifications. Each node is equipped with an Intel Xeon E5-2630 v3 CPU, 64 GB of DDR4 memory, an SSD for the operating system, and HDDs used as Ceph OSDs. Specifically, each node has two HDDs, for a total of six HDDs used as Ceph OSDs. Additionally, a 10 GbE network was used for communication between nodes.
 
 | Component | Specification |
 |---|---|
@@ -38,25 +37,25 @@ This study used three nodes on CloudLab's FASTA25-AE project. Used nodes, 'node0
 With this configuration, Ceph stores data using HDDs distributed across multiple nodes. Consequently, the performance results of this experiment are influenced not only by the performance of individual disks but also by HDD access speeds, the inter-node network, and Ceph’s replication processes.
 
 ## Software Environment
-This study used Ubuntu 22.04.2 LTS on each node, and installed Ceph 17.2.9 Quincy to set up the cluster. For Ceph storage, RBD was used and vSCSI was replayed for created RBD. Regarding the trace replay, an originally created Python script was used, which reads block I/O called 'cloudPhysicsIO.vscsi' and issues actual read/write requests to '/dev/rbd0'. In addition, in order to analyze the cash performance, 'cachesim' from libCacheSim was utilized. The software environment is summarized in the following table:
+This study used Ubuntu 22.04.2 LTS on each node, and installed Ceph 17.2.9 Quincy to set up the cluster. For Ceph storage, an RBD image was created and mapped as a block device, and the vSCSI trace was replayed against it. Regarding the trace replay, an originally created Python script was used, which reads block I/O called 'cloudPhysicsIO.vscsi' and issues actual read/write requests to '/dev/rbd0'. In addition, in order to analyze the cache performance, 'cachesim' from libCacheSim was utilized. The software environment is summarized in the following table:
 
 | Component | Version / Detail |
 |---|---|
 | Operating System | Ubuntu 22.04.2 LTS, Linux 5.15.0-168-generic |
 | Ceph | 17.2.9 Quincy |
-| Trace replay tool | Custom Python script using `O_SYNC` direct I/O to `/dev/rbd0` |
+| Custom Python script using synchronous writes with `O_SYNC` to `/dev/rbd0`|
 | Cache simulation tool | libCacheSim `cachesim` |
 | Trace file | `cloudPhysicsIO.vscsi` |
 
 This software environment enables a comparison between the I/O performance on an actual Ceph cluster and the behavior predicted by cache simulations.
 
 # Ceph Configuration
-In this experiment, a Ceph cluster was set up using three nodes. It manages storage devices on multiple nodes, distibuted storage system that distributes, replicates, and stores data. This section describes the configuration of the Ceph cluster and the setting of storage used in this experiment.
+In this experiment, a Ceph cluster was set up using three nodes. This section describes the configuration of the Ceph cluster and the setting of storage used in this experiment.
 
 ## Cluster Topology
 The Ceph cluster in this experiment consists of three nodes, which are 'node0', 'node1', and 'node2'. Each node hosted a MON daemon, forming a quorum of three monitors. Additionally, MGR daemon was configured with 'node0' as the active manager and 'node1' as the standby manager. 
 
-Six OSDs were set up in total. Each node had two HDD and each HDD was used as a Ceph OSD. Specifically, 'osd0' and 'osd.2' were palced on 'node0', 'osd.1' and 'osd.3' were placed on 'node1', and 'osd.4' and 'osd.5' were placed on 'node2'. BluesStore was used as the OSD backend.
+Six OSDs were set up in total. Each node had two HDD and each HDD was used as a Ceph OSD. Specifically, 'osd.0' and 'osd.2' were placed on 'node0', 'osd.1' and 'osd.3' were placed on 'node1', and 'osd.4' and 'osd.5' were placed on 'node2'. BlueStore was used as the OSD backend.
 The Ceph cluster configuration is summarized below.
 
 | Component | Configuration |
@@ -108,7 +107,8 @@ The record format of the trace is as follows.
 In this context, the `cmd` field was used to determine whether each request was a read or a write. Additionally, `lbn` indicates the logical block number of the target, and when actually issuing I/O to the Ceph RBD, this value was used as an offset in 512-byte units.
 
 ## Workload Characteristics
-This trace contains a total of 113,872 I/O requests. Of these, 46,974 were read requests and 66,898 were write requests, indicating that the proportion of writes is higher than that of reads. Therefore, this workload is write-dominant.
+The trace is write-dominant, with writes accounting for 58.7% of all 
+113,872 requests.
 
 The main characteristics of the workload are as follows.
 
@@ -148,7 +148,11 @@ Next, we replayed the vSCSI trace as actual block I/O on a Ceph RBD device. To d
 
 For each request, we calculated the access offset based on the Logical Block Number (lbn) in the trace. Specifically, we multiplied the lbn by 512 bytes to determine the byte-level offset on the RBD device. We also used the `len` field in the trace for the I/O size. This allowed us to issue actual I/O operations that closely matched the access locations and sizes recorded in the trace.
 
-For write requests, `O_SYNC` was used. This ensures that writes are not merely written to the OS page cache, but are processed by Ceph and completed only after being committed to all three OSD replicas. This configuration is essential for measuring Ceph’s actual write latency.
+For write requests, `O_SYNC` was used so that writes were 
+completed synchronously rather than being acknowledged only 
+after being buffered. However, this does not fully eliminate 
+the influence of the Linux page cache, especially for read 
+requests.
 
 Additionally, the Linux page cache was flushed before starting the replay. This minimized the influence of the page cache at the start of the experiment. Requests were issued in a single-threaded manner, following the order of the traces. This was done to preserve the I/O order within the traces and to first observe the basic behavior of a single client.
 
@@ -201,7 +205,8 @@ Next, the same `cloudPhysicsIO.vscsi` trace was replayed as real block I/O again
 | Total throughput | 2.44 MB/s |
 | Errors | 0 |
 
-The full replay took 1,645 seconds, or approximately 27 minutes. The overall IOPS was 69.22. The read throughput was 1.04 MB/s, the write throughput was 1.40 MB/s, and the total throughput was 2.44 MB/s. No errors occurred during the replay.
+The replay completed in 1,645 seconds with 69.22 IOPS, 2.44 MB/s 
+total throughput, and no errors.
 
 The latency results are shown below.
 
@@ -213,11 +218,12 @@ The latency results are shown below.
 | p99 | 78.505 ms | 0.708 ms | 95.260 ms |
 | Max | 227.357 ms | 18.811 ms | 227.357 ms |
 
-The latency results show that write operations had much higher latency than read operations. The average write latency was 24.543 ms, while the average read latency was only 0.056 ms. The p99 write latency was 95.260 ms, and the maximum write latency was 227.357 ms. These results indicate that write operations were more expensive than read operations in this experiment.
-
+Write latency was significantly higher than the measured read latency, 
+though the read latency figure is influenced by the Linux page cache 
+as discussed in Section 7.3.
 
 ## BlueStore Cache Performance
-Finally, BlueStore performance counters were used to measure the cache behavior actually observed inside the Ceph backend. The counters were collected from all six OSDs before and after the replay, and the differences were used to estimate the cache activity caused by the workload.
+Finally, BlueStore performance counters were used to measure the cache behavior actually observed inside the Ceph backend. Since the BlueStore performance counters could not be reset between runs, the counters were recorded immediately before and after the replay, and the difference was used to isolate the I/O activity attributable to the trace replay.
 
 | BlueStore Metric | Value |
 |---|---:|
@@ -229,7 +235,17 @@ Finally, BlueStore performance counters were used to measure the cache behavior 
 
 According to the BlueStore performance counters, 1,902 random reads reached BlueStore during the replay. Among them, 436 reads were served from the BlueStore memory cache, while 1,520 reads required disk access.
 
-The observed BlueStore cache hit rate was 22.9%, and the cache miss rate was 79.9%. These values serve as the real-system measurements that can be compared with the idealized cache simulation results from libCacheSim.
+The observed BlueStore cache hit rate was 22.9%, and the cache 
+miss rate was 79.9%. These values serve as the real-system 
+measurements that can be compared with the idealized cache 
+simulation results from libCacheSim.
+
+Note that the sum of cache hits (436) and cache misses (1,520) 
+equals 1,956, which slightly exceeds the total random read count 
+of 1,902. This discrepancy likely arises because BlueStore's 
+internal counters track different granularities of I/O operations, 
+and some reads may be counted differently across the buffer and 
+disk paths.
 
 This section reports the results only. The reasons for the difference between the simulated cache behavior and the observed BlueStore cache behavior are discussed in the next section.
 
@@ -244,8 +260,6 @@ In this experiment, the average write latency was 24.543 ms, and the p99 write l
 The main reason is that a Ceph write operation is not a simple write to a single disk. In this experiment, the replication factor was set to 3. Therefore, each write request had to be replicated to three OSDs. From the client’s perspective, a write can only complete after the required OSDs process the write and return acknowledgements.
 
 In addition, this experiment used HDDs as OSD disks. HDDs are affected by seek time and rotational latency during random writes, so write latency is generally higher than it would be with SSDs. Ceph’s BlueStore commit process and network communication between nodes can also contribute to the final write latency.
-
-Therefore, an average write latency of about 24 ms and a p99 write latency of about 95 ms are not surprising for a Ceph cluster using HDDs with 3-way replication. These results indicate that the Ceph write path is affected by disk performance, replication, and internal BlueStore processing.
 
 ## Simulation vs. Real-World Gap
 
@@ -282,11 +296,40 @@ Therefore, the measured read latency in this experiment is strongly influenced b
 This is an important limitation of the current experiment, and future experiments should include a more controlled read performance measurement.
 
 # Limitations and Future Work
+The following limitations should be considered when interpreting 
+the results.
 
-## Limitations
+- Read latency measurements were dominated by the Linux page cache 
+  rather than Ceph OSD performance, as discussed in Section 7.3.
+- The replay was single-threaded and does not reflect the concurrent 
+  I/O behavior of real cloud workloads.
+- Only one trace was used, which limits generalizability to other 
+  workload types.
+- Each configuration was run only once; averaging multiple runs would 
+  improve measurement reliability.
+
 
 ## Future Work
 
+Future work should first measure read performance more accurately. One possible approach is to issue a read-only workload against pre-written data while carefully controlling both the Linux page cache and the BlueStore cache. This would make it possible to measure the actual read latency of the Ceph OSDs and HDDs more accurately.
+
+Another direction is to compare different replication factors. This experiment used a replication factor of 3, but testing a replication factor of 2 or other redundancy configurations would help evaluate how write latency and durability change under different settings. This would make the latency-durability trade-off clearer.
+
+It would also be useful to test different BlueStore cache sizes. In this experiment, the BlueStore cache size was 1 GB per OSD. By increasing or decreasing the cache size, future experiments could examine how the gap between the libCacheSim simulation results and the actual BlueStore cache performance changes.
+
+In addition, multi-threaded replay should be introduced to create a workload that is closer to real cloud storage environments. By issuing I/O requests from multiple threads or clients, future experiments could measure how much throughput Ceph can achieve under concurrent workloads.
+
+Finally, future work should evaluate Ceph under a degraded cluster state. For example, replaying the trace while one OSD is down would help measure how write latency, read performance, and availability change during failures. This would be important for understanding the fault tolerance behavior of distributed storage systems such as Ceph.
+
 # Conclusion
 
-# References
+This study evaluated the performance of Ceph by deploying a three-node Ceph cluster on CloudLab and replaying a real-world block I/O trace named `cloudPhysicsIO.vscsi`. The experiment included workload analysis, cache simulation with libCacheSim, real I/O replay against Ceph RBD, and cache behavior measurement using BlueStore performance counters.
+
+The workload analysis showed that the trace was write-dominant, with write requests accounting for 58.7% of all requests. The most frequent I/O size was 64 KB, and the workload showed bursty behavior. These characteristics suggest that the trace represents a more realistic storage workload than a simple synthetic benchmark.
+
+The libCacheSim simulation predicted a miss ratio of 62.97% for LRU with a 1 GB cache. However, the actual BlueStore performance counters showed a cache miss rate of 79.9%. This gap can be explained by several factors. First, the BlueStore cache is not dedicated only to user data, but is also used for metadata and RocksDB-related information. Second, the replication factor of 3 distributes data across multiple independent OSD caches. Third, BlueStore’s actual cache eviction behavior is more complex than the idealized LRU model used in the simulation.
+
+The real I/O replay showed that the average write latency was 24.543 ms, and the p99 write latency was 95.260 ms. These values are reasonable for a Ceph cluster using HDDs with 3-way replication. They indicate that Ceph write performance is affected by disk latency, replication, and BlueStore commit processing. In contrast, the measured read latency was very low, but this result should be interpreted carefully because it was likely influenced by the Linux page cache rather than pure Ceph OSD read performance.
+
+Overall, the results show that there can be a substantial gap between cache behavior predicted by simulation and performance observed in a real distributed storage system. In a system such as Ceph, performance is affected by replication, metadata management, backend cache design, and operating-system-level caching. Therefore, understanding distributed storage performance requires not only simulation, but also measurement and analysis on a real cluster.
+
