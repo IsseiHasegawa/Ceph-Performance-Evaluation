@@ -172,7 +172,7 @@ The main counters used are as follows.
 | `read_random_buffer_count` | Number of reads served from the BlueStore memory cache |
 | `read_random_disk_count` | Number of reads that required disk access |
 
-Since `read_random_buffer_count` represents reads processed by BlueStore’s memory cache, we treated it as a cache hit. On the other hand, since `read_random_disk_count` represents reads that actually required disk access, we treated it as a cache miss.
+Since `read_random_buffer_count` and `read_random_disk_count` describe internal BlueFS/BlueStore read paths, I used them as backend read-path indicators rather than as a direct user-data cache hit/miss ratio. In particular, `read_random_buffer_count` indicates reads processed through the internal buffer path, while `read_random_disk_count` indicates reads that reached disk.
 
 This approach allowed us to compare the cache miss rate predicted by libCacheSim with the cache miss rate observed in the actual BlueStore system.
 
@@ -321,7 +321,7 @@ In addition, this experiment used HDDs as OSD disks. HDDs are affected by seek t
 
 One of the central findings of this experiment is the gap between the cache miss ratio predicted by libCacheSim and the cache miss rate actually observed in BlueStore.
 
-For a 1 GB cache size, the libCacheSim LRU simulation predicted a miss ratio of 62.97%. In contrast, the actual BlueStore performance counters showed a cache miss rate of 79.9%. This means that the observed BlueStore miss rate was about 16.9 percentage points higher than the simulated result.
+For a 1 GB simulated cache, libCacheSim predicted an LRU miss ratio of 62.97%. The BlueFS/BlueStore counters, however, showed that many backend random-read events still reached disk. These two measurements should not be interpreted as a direct cache-miss comparison because libCacheSim models an idealized data-block cache, while the Ceph counters reflect internal backend read paths.
 
 | Measurement | Miss Rate | Hit Rate |
 |---|---:|---:|
