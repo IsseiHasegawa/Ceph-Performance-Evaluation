@@ -22,7 +22,7 @@ This paper first describes the experimental environment and the configuration of
 # Experimental Environment
 
 ## Hardware Environment
-This study used three nodes on CloudLab's FAST25-AE project. Used nodes, 'node0', 'node1', and 'node2', have the same hardware specifications. Each node is equipped with an Intel Xeon E5-2630 v3 CPU, 64 GB of DDR4 memory, an SSD for the operating system, and HDDs used as Ceph OSDs. Specifically, each node has two HDDs, for a total of six HDDs used as Ceph OSDs. Additionally, a 10 GbE network was used for communication between nodes.
+This study used three nodes on CloudLab's FAST25-AE project. The nodes used in this experiment, `node0`, `node1`, and `node2`, had the same hardware specifications. Each node is equipped with an Intel Xeon E5-2630 v3 CPU, 64 GB of DDR4 memory, an SSD for the operating system, and HDDs used as Ceph OSDs. Specifically, each node has two HDDs, for a total of six HDDs used as Ceph OSDs. Additionally, a 10 GbE network was used for communication between nodes.
 
 | Component | Specification |
 |---|---|
@@ -43,7 +43,7 @@ This study used Ubuntu 22.04.2 LTS on each node, and installed Ceph 17.2.9 Quinc
 |---|---|
 | Operating System | Ubuntu 22.04.2 LTS, Linux 5.15.0-168-generic |
 | Ceph | 17.2.9 Quincy |
-| Custom Python script using synchronous writes with `O_SYNC` to `/dev/rbd0`|
+| Trace replay tool | Custom Python script using synchronous writes with `O_SYNC` to `/dev/rbd0` |
 | Cache simulation tool | libCacheSim `cachesim` |
 | Trace file | `cloudPhysicsIO.vscsi` |
 
