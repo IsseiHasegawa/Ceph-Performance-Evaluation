@@ -8,7 +8,19 @@ format:
     number-sections: true
     code-line-numbers: true
     fig-pos: 'H'
+    include-in-header:
+      text: |
+        \usepackage{xurl}
 bibliography: references.bib
+csl: https://www.zotero.org/styles/ieee
+nocite: |
+  @weil2006ceph,
+  @ceph_rbd_docs,
+  @ceph_bluestore_config,
+  @ceph_perf_counters,
+  @libcachesim_github,
+  @cloudlab_manual,
+  @linux_open_man2
 execute:
   echo: false
 ---
@@ -172,7 +184,10 @@ The main counters used are as follows.
 | `read_random_buffer_count` | Number of reads served from the BlueStore memory cache |
 | `read_random_disk_count` | Number of reads that required disk access |
 
-Since `read_random_buffer_count` and `read_random_disk_count` describe internal BlueFS/BlueStore read paths, I used them as backend read-path indicators rather than as a direct user-data cache hit/miss ratio. In particular, `read_random_buffer_count` indicates reads processed through the internal buffer path, while `read_random_disk_count` indicates reads that reached disk.
+Since read_random_buffer_count represents reads processed by 
+BlueStore's memory cache, we treated it as a cache hit. On the 
+other hand, since read_random_disk_count represents reads that 
+actually required disk access, we treated it as a cache miss.
 
 This approach allowed us to compare the cache miss rate predicted by libCacheSim with the cache miss rate observed in the actual BlueStore system.
 
@@ -321,7 +336,11 @@ In addition, this experiment used HDDs as OSD disks. HDDs are affected by seek t
 
 One of the central findings of this experiment is the gap between the cache miss ratio predicted by libCacheSim and the cache miss rate actually observed in BlueStore.
 
-For a 1 GB simulated cache, libCacheSim predicted an LRU miss ratio of 62.97%. The BlueFS/BlueStore counters, however, showed that many backend random-read events still reached disk. These two measurements should not be interpreted as a direct cache-miss comparison because libCacheSim models an idealized data-block cache, while the Ceph counters reflect internal backend read paths.
+For a 1 GB cache size, the libCacheSim LRU simulation predicted 
+a miss ratio of 62.97%. In contrast, the actual BlueStore 
+performance counters showed a cache miss rate of 79.9%. This 
+means that the observed BlueStore miss rate was about 16.9 
+percentage points higher than the simulated result.
 
 | Measurement | Miss Rate | Hit Rate |
 |---|---:|---:|
@@ -389,3 +408,7 @@ The real I/O replay showed that the average write latency was 24.543 ms, and the
 
 Overall, the results show that there can be a substantial gap between cache behavior predicted by simulation and performance observed in a real distributed storage system. In a system such as Ceph, performance is affected by replication, metadata management, backend cache design, and operating-system-level caching. Therefore, understanding distributed storage performance requires not only simulation, but also measurement and analysis on a real cluster.
 
+# References {.unnumbered}
+
+::: {#refs}
+:::
