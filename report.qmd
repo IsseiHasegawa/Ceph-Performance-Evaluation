@@ -170,6 +170,7 @@ the influence of the Linux page cache, especially for read
 requests.
 
 Additionally, the Linux page cache was flushed before starting the replay. This minimized the influence of the page cache at the start of the experiment. Requests were issued in a single-threaded manner, following the order of the traces. This was done to preserve the I/O order within the traces and to first observe the basic behavior of a single client.
+It is important to note that this replay preserved the order, command type, offset, and size of the original trace requests, but it did not reproduce the original inter-arrival times from the timestamp field. Therefore, the measured IOPS and throughput represent the performance of a single-threaded accelerated replay, rather than the request rate of the original two-hour trace.
 
 ## BlueStore Statistics Collection
 Finally, we used Ceph BlueStore’s performance counters to measure the actual read and caching behavior occurring in the BlueStore backend. We used the `ceph tell osd.* perf dump` command to retrieve the performance counters for each OSD immediately before and after trace replay.
